@@ -8,6 +8,7 @@ logger = getLogger()
 def make_iwildcam(
     transform,
     batch_size,
+    collator=None,
     split="extra_unlabeled",
     num_workers=8,
     world_size=1,
@@ -36,12 +37,13 @@ def make_iwildcam(
     else:
         dataset = WildsToTorchWrapper(dataset)
 
-    dist_sampler = torch.utils.data.DistributedSampler(
+    dist_sampler = torch.utils.data.distributed.DistributedSampler(
         dataset=dataset, num_replicas=world_size, rank=rank, shuffle=shuffle
     )
 
     data_loader = torch.utils.data.DataLoader(
         dataset,
+        collate_fn=collator,
         sampler=dist_sampler,
         batch_size=batch_size,
         drop_last=drop_last,
