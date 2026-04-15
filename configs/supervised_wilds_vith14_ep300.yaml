@@ -1,0 +1,29 @@
+meta:
+  model_name: vit_huge
+  embed_dim: 1280
+  load_checkpoint: true
+  read_checkpoint: jepa-latest.pth.tar
+  use_bfloat16: true
+  num_classes: 182
+
+data:
+  batch_size: 128
+  root_path: ./wilds_data
+  num_workers: 10
+  pin_mem: true
+  crop_size: 224
+
+optimization:
+  optimizer: adamw # 'adamw' or 'sgd'
+  freeze_weights: true # true for linear probing, false for full fine-tuning
+  epochs: 50
+  lr: 0.001
+  weight_decay: 0.05
+  start_lr: 0.0001
+  final_lr: 1.0e-06
+  warmup: 5
+  ipe_scale: 1.0
+
+logging:
+  folder: experiment_logs/supervised-vith14.224-bs.128-ep.300/
+  write_tag: linear_probe
