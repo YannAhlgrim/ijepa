@@ -73,15 +73,15 @@ class Trainer:
 
 
 def launch():
-    executor = submitit.AutoExecutor(
+    executor = submitit.SlurmExecutor(
         folder=os.path.join(args.folder, 'job_%j'),
-        slurm_max_num_timeout=20)
+        max_num_timeout=20)
     executor.update_parameters(
-        slurm_partition=args.partition,
-        slurm_mem_per_gpu='55G',
-        timeout_min=args.time,
+        partition=args.partition,
+        mem_per_gpu='55G',
+        time=args.time,
         nodes=args.nodes,
-        tasks_per_node=args.tasks_per_node,
+        ntasks_per_node=args.tasks_per_node,
         cpus_per_task=10,
         gpus_per_node=args.tasks_per_node)
 
