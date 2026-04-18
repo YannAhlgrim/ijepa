@@ -14,7 +14,7 @@ import yaml
 
 import submitit
 
-from src.train import main as app_main
+from src.train_supervised import main as app_main
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger()
@@ -73,11 +73,11 @@ class Trainer:
 
 def launch():
     executor = submitit.SlurmExecutor(
-        folder=os.path.join(args.folder, 'job_%j'),
-        max_num_timeout=20)
+        folder=os.path.join(args.folder, "job_%j"), max_num_timeout=20
+    )
     executor.update_parameters(
         partition=args.partition,
-        mem_per_gpu='55G',
+        mem_per_gpu="55G",
         time=args.time,
         nodes=args.nodes,
         ntasks_per_node=args.tasks_per_node,
