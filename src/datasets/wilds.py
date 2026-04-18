@@ -18,24 +18,19 @@ def make_iwildcam(
     pin_mem=True,
     drop_last=True,
 ):
-    """
-    Adapted loader for WILDS-iWildCam
-    """
-
-    shuffle = True if split == "extra_unlabeled" or split == "train" else False
     unlabeled = True if split == "extra_unlabeled" else False
+    shuffle = True if split == "extra_unlabeled" or split == "train" else False
 
     full_dataset = get_dataset(
         dataset="iwildcam", download=download, root_dir=root_path, unlabeled=unlabeled
     )
 
     dataset = full_dataset.get_subset(split, transform=transform)
-    logger.info(f"iWildCam {split} dataset created with {len(dataset)} samples")
 
-    if unlabeled:
-        dataset = WildsToTorchWrapperUnlabeled(dataset)
-    else:
-        dataset = WildsToTorchWrapper(dataset)
+    # Use the unified wrapper that mimics the ImageNet structure
+    dataset = WildsToTorchWrapper(dataset, is_unlabeled=unlabeled)
+
+    logger.info(f"iWildCam {split} dataset created with {len(dataset)} samples")
 
     dist_sampler = torch.utils.data.distributed.DistributedSampler(
         dataset=dataset, num_replicas=world_size, rank=rank, shuffle=shuffle
@@ -52,38 +47,29 @@ def make_iwildcam(
         persistent_workers=(num_workers > 0),
     )
 
-    logger.info(f"iWildCam {split} data loader created")
-
     return dataset, data_loader, dist_sampler
-
-
-class WildsToTorchWrapperUnlabeled(torch.utils.data.Dataset):
-    """
-    WILDS __getitem__ returns (image, metadata).
-    """
-
-    def __init__(self, wilds_subset):
-        self.dataset = wilds_subset
-
-    def __getitem__(self, i):
-        x, _ = self.dataset[i]  # remove metadata
-        return x
-
-    def __len__(self):
-        return len(self.dataset)
 
 
 class WildsToTorchWrapper(torch.utils.data.Dataset):
     """
-    WILDS __getitem__ returns (image, target, metadata).
+    Mimics the ImageNet wrapper by always returning (image, target).
     """
 
-    def __init__(self, wilds_subset):
+    def __init__(self, wilds_subset, is_unlabeled=False):
         self.dataset = wilds_subset
+        self.is_unlabeled = is_unlabeled
 
     def __getitem__(self, i):
-        x, y, _ = self.dataset[i]  # remove metadata
-        return x, y
+        if self.is_unlabeled:
+            # metadata is at index 1 for unlabeled WILDS
+            x, _ = self.dataset[i]
+            target = -1  # Dummy target to match (img, target) signature
+        else:
+            # image, target, metadata
+            x, y, _ = self.dataset[i]
+            target = y
+
+        return x, target
 
     def __len__(self):
         return len(self.dataset)
