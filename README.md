@@ -201,6 +201,38 @@ Outputs:
 - `experiment_logs/label-efficiency/summary.csv` (columns: 1%, 10%, 50%, 100% OOD F1-Macro)
 - `experiment_logs/label-efficiency/<model>/summary.json`
 
+## WILDS leaderboard submission
+
+This repo can package trained checkpoints into the exact CSV format expected by
+the [WILDS submission page](https://wilds.stanford.edu/submit/).
+
+For `vith14_224_in22k` (a non-standard submission because the encoder is
+pre-trained on ImageNet-22K), the post-training evaluation now generates
+predictions for all four official splits: `val`, `id_val`, `id_test`, and
+`test`. The best checkpoint is also preserved in the eval folder and copied to
+the project root per seed.
+
+Train the 5-seed sweep and produce the submission tarball:
+
+```
+bash tools/run_wilds_submission.sh --partition $slurm_partition --time $time
+```
+
+After all SLURM jobs finish, generate the upload-ready package:
+
+```
+python3 tools/generate_wilds_submission.py \
+  --submission-name vith14_224_in22k \
+  --eval-root experiment_logs/eval-wilds \
+  --out-dir .
+```
+
+Artifacts:
+- `vith14_224_in22k_wilds_submission.tar.gz` — upload this to WILDS.
+- `vith14_224_in22k_submission/f1_macro.txt` — per-seed and aggregated F1-Macro
+  for verification (expected OOD test mean ≈ 0.260).
+- `vith14_224_in22k_seed{0..4}.pth.tar` — downloadable per-seed checkpoints.
+
 ## License
 
 See the `LICENSE` file for details about the license under which this code is made available.

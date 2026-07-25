@@ -60,7 +60,9 @@ def build_run_name(args):
     weight_decay = opt_args.get("weight_decay")
     epochs = opt_args.get("epochs")
 
-    parts = [model_name]
+    submission_model_name = meta_args.get("submission_model_name")
+    parts = [submission_model_name] if submission_model_name else []
+    parts.append(model_name)
 
     def add(prefix, value):
         formatted = _format_value(value)

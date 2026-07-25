@@ -214,6 +214,14 @@ def main(args):
 
     metrics = full_dataset.eval(all_y_pred, all_y_true, all_metadata)
 
+    # Save raw predictions (one class label per line) in the exact format expected
+    # by the WILDS leaderboard submission evaluate.py script.
+    pred_path = os.path.join(folder, f"{tag}_predictions.csv")
+    with open(pred_path, "w") as f:
+        for pred in all_y_pred.tolist():
+            f.write(f"{pred}\n")
+    logger.info(f"Eval predictions saved to {pred_path}")
+
     eval_time_seconds = time.time() - eval_start
     peak_host_ram_gb = _peak_host_ram_gb()
     peak_gpu_alloc_gb, peak_gpu_reserved_gb = _peak_gpu_mem_gb(device)
@@ -263,6 +271,7 @@ def main(args):
     return {
         "metrics": metrics,
         "metrics_path": metrics_path,
+        "predictions_path": pred_path,
         "folder": folder,
     }
 

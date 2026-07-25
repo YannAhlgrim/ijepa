@@ -24,6 +24,9 @@ from src.utils.logging import CSVLogger, AverageMeter, resolve_log_dir
 from src.utils.optimizers import LARS
 from src.eval_wilds import main as eval_wilds_main
 
+# Repository root used to store downloadable checkpoints in the project root.
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+
 # --
 log_freq = 10
 checkpoint_freq = 50
@@ -602,10 +605,11 @@ def main(args, resume_preempt=False):
             )
 
     if rank == 0:
-        # Evaluate on both the in-distribution (id_test) and out-of-distribution
-        # (test) splits so the generalization gap can be measured.
+        # Evaluate on all official WILDS leaderboard splits for submission.
         # WILDS-iWildCam: "id_test" == Test ID, "test" == Test OOD.
         eval_splits = [
+            ("val", "iwildcam_val"),
+            ("id_val", "iwildcam_id_val"),
             ("id_test", "iwildcam_id_test"),
             ("test", "iwildcam_test"),
         ]
@@ -691,6 +695,10 @@ def main(args, resume_preempt=False):
                     "best_val_loss": float(early_stopper.best_metric),
                     "best_epoch": int(early_stopper.best_epoch),
                     "best_checkpoint": best_path,
+                    "eval_checkpoint": (
+                        os.path.join(eval_folder, "best_model.pth.tar")
+                        if eval_folder else best_path
+                    ),
                     "seed": seed,
                     "train_time_seconds": float(train_time_seconds),
                     "train_time_hms": _format_hms(train_time_seconds),
@@ -700,6 +708,16 @@ def main(args, resume_preempt=False):
                     "peak_host_ram_gb": peak_host_ram_gb,
                     "peak_gpu_alloc_gb": peak_gpu_alloc_gb,
                     "peak_gpu_reserved_gb": peak_gpu_reserved_gb,
+                    "eval_metrics_val": (
+                        eval_results.get("val", {}).get("metrics")
+                        if eval_results.get("val")
+                        else None
+                    ),
+                    "eval_metrics_id_val": (
+                        eval_results.get("id_val", {}).get("metrics")
+                        if eval_results.get("id_val")
+                        else None
+                    ),
                     "eval_metrics_id_test": (
                         eval_results.get("id_test", {}).get("metrics")
                         if eval_results.get("id_test")
@@ -715,6 +733,28 @@ def main(args, resume_preempt=False):
                     yaml.dump(params_out, f)
                 with open(os.path.join(eval_folder, "params.yaml"), "w") as f:
                     yaml.dump(params_out, f)
+
+                # Preserve the trained checkpoint so the WILDS submission generator can
+                # re-load it. Also copy to the project root if a submission name is set.
+                eval_checkpoint_path = os.path.join(eval_folder, "best_model.pth.tar")
+                try:
+                    shutil.copy(best_path, eval_checkpoint_path)
+                    logger.info(f"Best checkpoint copied to {eval_checkpoint_path}")
+                except OSError:
+                    logger.warning("Could not copy best checkpoint to eval folder")
+
+                submission_model_name = m_args.get("submission_model_name")
+                if submission_model_name:
+                    root_checkpoint_path = os.path.join(
+                        PROJECT_ROOT, f"{submission_model_name}_seed{seed}.pth.tar"
+                    )
+                    try:
+                        shutil.copy(best_path, root_checkpoint_path)
+                        logger.info(f"Best checkpoint copied to {root_checkpoint_path}")
+                    except OSError:
+                        logger.warning(
+                            f"Could not copy best checkpoint to {root_checkpoint_path}"
+                        )
             except OSError:
                 logger.warning("Could not write supervised params to eval folder")
 

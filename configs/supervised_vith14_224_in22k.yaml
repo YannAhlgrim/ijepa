@@ -9,6 +9,7 @@ meta:
   num_classes: 182
   representation_type: last_avgpool
   head_type: bn_linear
+  submission_model_name: vith14_224_in22k
 
 data:
   batch_size: 16
