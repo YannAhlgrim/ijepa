@@ -17,12 +17,6 @@ Reference: official I-JEPA README https://github.com/facebookresearch/ijepa/blob
   encoded to predict the representations of several target blocks (green/red/orange).</em>
 </p>
 
-## Models
-
-- ViT-H, 14x14 patches, 224x224 resolution (trained)
-- ViT-H, 16x16 patches, 448x448 resolution (trained)
-- Plan: add a graph comparing models with the WILDS leaderboard https://wilds.stanford.edu/leaderboard/#with-unlabeled-data-1
-
 ## Results
 
 Linear-probing evaluation on iWildCam2020-WILDS with a **frozen** I-JEPA encoder and a
@@ -149,7 +143,7 @@ bash tools/run_seed_sweep.sh --partition $slurm_partition --time $time
 Run a subset of models:
 
 ```
-bash tools/run_seed_sweep.sh --partition $slurm_partition --models "vith14_224 vith16_448"
+bash tools/run_seed_sweep.sh --partition $slurm_partition --models "vith14_224 vith16_448_in1k"
 ```
 
 Per-model seed grids live in `configs/grids/seeds/` (each sets

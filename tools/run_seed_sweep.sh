@@ -16,7 +16,7 @@
 #
 # Usage:
 #   bash tools/run_seed_sweep.sh [--partition P] [--time MIN] [--folder DIR]
-#                                [--models "vith14_224 vith16_448"]
+#                                [--models "vith14_224 vith16_448_in1k"]
 #
 set -euo pipefail
 

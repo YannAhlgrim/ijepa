@@ -18,6 +18,7 @@ from torch.nn.parallel import DistributedDataParallel
 from src.datasets.wilds import make_iwildcam
 from src.helper import init_model
 from src.models.head import ViTClassifier
+from src.models.loss import make_criterion
 from src.transforms import make_transforms, make_transform_eval
 from src.utils.distributed import init_distributed
 from src.utils.logging import CSVLogger, AverageMeter, resolve_log_dir
@@ -82,6 +83,28 @@ def _peak_gpu_mem_gb(device):
         return float(alloc), float(reserved)
     except (RuntimeError, ValueError):
         return None, None
+
+
+def _compute_class_counts(train_dataset, num_classes):
+    """Extract per-class sample counts from the iWildCam training subset.
+
+    Supports the WildsToTorchWrapper around a WILDS subset or a torch Subset.
+    """
+    if not hasattr(train_dataset, "dataset"):
+        raise TypeError("Cannot determine class counts from train_dataset")
+
+    underlying = train_dataset.dataset
+    if isinstance(underlying, torch.utils.data.Subset):
+        base_labels = np.asarray(underlying.dataset.y_array)
+        indices = np.asarray(underlying.indices)
+        labels = base_labels[indices]
+    elif hasattr(underlying, "y_array"):
+        labels = np.asarray(underlying.y_array)
+    else:
+        raise TypeError("Cannot determine class counts from train_dataset")
+
+    counts = np.bincount(labels, minlength=num_classes)
+    return counts.astype(np.float32)
 
 
 def strip_module_prefix(state_dict):
@@ -375,7 +398,7 @@ def main(args, resume_preempt=False):
             f"Using label_fraction={label_fraction} for the training split (seed={seed})"
         )
 
-    _, train_loader, train_sampler = make_iwildcam(
+    train_dataset, train_loader, train_sampler = make_iwildcam(
         transform=train_transform,
         split="train",
         batch_size=d_args["batch_size"],
@@ -403,7 +426,13 @@ def main(args, resume_preempt=False):
         drop_last=False,
     )
 
-    criterion = nn.CrossEntropyLoss().to(device)
+    loss_name = o_args.get("loss", "cross_entropy")
+    class_counts = _compute_class_counts(train_dataset, m_args["num_classes"])
+    criterion = make_criterion(loss_name, class_counts=class_counts, device=device)
+    logger.info(
+        f"Using loss: {loss_name} (class_counts sum={int(class_counts.sum())}, "
+        f"nonzero={int((class_counts > 0).sum())})"
+    )
     model = DistributedDataParallel(model, device_ids=[torch.cuda.current_device()])
 
     eval_every = int(v_args["eval_every"])

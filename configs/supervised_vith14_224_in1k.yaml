@@ -27,6 +27,7 @@ mask:
 
 optimization:
   optimizer: adamw
+  loss: balanced_softmax
   freeze_weights: true
   epochs: 100
   lr: 0.01
