@@ -6,7 +6,6 @@ Reference: official I-JEPA README https://github.com/facebookresearch/ijepa/blob
 
 - SSL pretraining on WILDS-iWildCam unlabeled dataset: https://arxiv.org/abs/2112.05090 (Extending the WILDS Benchmark for Unsupervised Adaptation)
 - Supervised training on WILDS-iWildCam labeled dataset: https://arxiv.org/abs/2012.07421 (WILDS: A Benchmark of in-the-Wild Distribution Shifts)
-- Supervised learning supports full fine-tuning or freezing the encoder
 
 <p align="center">
   <img src="assets/ijepa_masking_turkey.jpg" width="640" alt="I-JEPA masking on an iWildCam camera-trap image">
@@ -32,34 +31,9 @@ ImageNet-pretrained checkpoints are reported here.
 | **ViT-H/14 (224, IN-22K)** | 0.348 ±0.003 | **0.260 ±0.003** | 0.088 |
 | ViT-g/16 (224, IN-22K) | 0.371 ±0.002 | 0.255 ±0.003 | 0.116 |
 
-Key takeaways:
+**ViT-H/14, IN-22K** reaches **0.260 OOD F1-Macro**, ranking
+  **#16** on the iWildCam2020-WILDS leaderboard.
 
-- The best frozen probe (**ViT-H/14, IN-22K**) reaches **0.260 OOD F1-Macro**, ranking
-  **#16** on the iWildCam2020-WILDS leaderboard — despite training only a linear head
-  rather than fine-tuning the full backbone.
-- Its ID→OOD generalization gap (ΔF1 = 0.088) is comparable to the full-fine-tuning
-  CLIP leaders on the leaderboard (FLYP ΔF1 = 0.139, AutoFT ΔF1 = 0.115).
-- Absolute F1-Macro scales with pretraining data (IN-22K > IN-1K) and input resolution
-  (the higher-resolution ViT-H/16 448 is the strongest IN-1K checkpoint).
-
-### Label efficiency
-
-Because I-JEPA pretrains without labels, the representations stay useful when labeled
-data is scarce. OOD Target F1-Macro when the linear probe trains on 1%, 10%, 50%, and
-100% of the labeled Source split (mean over 5 seeds):
-
-| Model | 1% | 10% | 50% | 100% |
-|---|---|---|---|---|
-| ViT-H/14 (224, IN-22K) | 0.193 ±0.009 | 0.236 ±0.011 | 0.261 ±0.009 | 0.260 ±0.003 |
-| ViT-g/16 (224, IN-22K) | 0.204 ±0.009 | 0.243 ±0.007 | 0.259 ±0.014 | 0.255 ±0.003 |
-| ViT-H/14 (224, IN-1K) | 0.120 ±0.036 | 0.190 ±0.010 | 0.220 ±0.012 | 0.214 ±0.006 |
-| ViT-H/16 (448, IN-1K) | 0.146 ±0.022 | 0.214 ±0.012 | 0.230 ±0.011 | 0.247 ±0.003 |
-
-A small labeled subset already recovers most of the full-data performance
-(diminishing returns), with the IN-22K backbones degrading most gracefully — a
-practical advantage for wildlife monitoring where labeled camera-trap data is expensive.
-
-These results are from the accompanying master thesis evaluating I-JEPA on iWildCam2020-WILDS.
 
 ## Repo layout
 
@@ -75,8 +49,6 @@ These results are from the accompanying master thesis evaluating I-JEPA on iWild
 - `tools/run_seed_sweep.sh`: launch each model across all seeds (one by one)
 - `tools/aggregate_seeds.py`: aggregate seed runs into mean +/- std (ID + OOD)
 - `requirements.txt`: dependencies
-
-<!-- Optional: add a sample iWildCam image grid here -->
 
 ## Requirements
 
@@ -124,9 +96,8 @@ Each run automatically:
   usage** into the per-split metrics JSON and into `params.yaml` in the eval
   folder.
 
-Effective memory is captured as a high-water mark during training:
-- `peak_host_ram_gb`: peak process RSS (`resource.getrusage`), to compare
-  against the SLURM `mem_per_gpu` request (e.g. 180G) and right-size future jobs.
+Effective memory is captured during training:
+- `peak_host_ram_gb`: peak process RSS (`resource.getrusage`).
   With `tasks_per_node: 1` this reflects the whole training worker.
 - `peak_gpu_alloc_gb` / `peak_gpu_reserved_gb`: peak GPU VRAM
   (`torch.cuda.max_memory_allocated` / `max_memory_reserved`).
